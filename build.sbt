@@ -109,6 +109,9 @@ val lucene_expressions        = "org.apache.lucene"              % "lucene-expre
 val lucene_spatial            = "org.apache.lucene"              % "lucene-spatial"            % luceneV
 
 val jts                       = "com.vividsolutions"             % "jts"                       % "1.13"
+
+val metrics                   = "io.dropwizard.metrics"          % "metrics-core"              % "3.1.0"
+val metrics_statsd            = "com.readytalk"                  % "metrics3-statsd"           % "4.1.2"
 // scalastyle:on
 
 
@@ -125,7 +128,9 @@ libraryDependencies ++= Seq(
   joda_convert, // To avoid warning: Class org.joda.convert.ToString not found
   specs2_core,
   scalatest,
-  specs2_core
+  specs2_core,
+  metrics,
+  metrics_statsd
 )
 
 libraryDependencies ++= Seq(

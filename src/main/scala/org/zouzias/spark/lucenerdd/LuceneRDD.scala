@@ -26,6 +26,7 @@ import org.apache.lucene.search.Query
 import org.apache.spark._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.storage.StorageLevel
+import org.zouzias.spark.lucenerdd.metrics.Metrics._
 import org.zouzias.spark.lucenerdd.partition.{AbstractLuceneRDDPartition, LuceneRDDPartition}
 import org.zouzias.spark.lucenerdd.models.SparkScoreDoc
 import org.zouzias.spark.lucenerdd.versioning.Versionable
@@ -173,6 +174,7 @@ class LuceneRDD[T: ClassTag](protected val partitionsRDD: RDD[AbstractLuceneRDDP
     val resultsByPart: RDD[(Long, TopK[SparkScoreDoc])] = partitionsRDD.mapPartitions(partitions =>
       partitions.flatMap { case partition =>
         queriesB.value.par.map { case (index, qr) =>
+          LuceneRDDCounter.inc()
           (index, topKMonoid.build(partition.query(qr, topK)))
         }
       })
