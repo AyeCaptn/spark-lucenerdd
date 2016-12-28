@@ -17,88 +17,26 @@
 package org.zouzias.spark.lucenerdd.analyzers
 
 import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.ar.ArabicAnalyzer
-import org.apache.lucene.analysis.bg.BulgarianAnalyzer
-import org.apache.lucene.analysis.br.BrazilianAnalyzer
-import org.apache.lucene.analysis.ca.CatalanAnalyzer
-import org.apache.lucene.analysis.cjk.CJKAnalyzer
-import org.apache.lucene.analysis.ckb.SoraniAnalyzer
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer
-import org.apache.lucene.analysis.cz.CzechAnalyzer
-import org.apache.lucene.analysis.da.DanishAnalyzer
-import org.apache.lucene.analysis.de.GermanAnalyzer
-import org.apache.lucene.analysis.el.GreekAnalyzer
-import org.apache.lucene.analysis.en.EnglishAnalyzer
-import org.apache.lucene.analysis.es.SpanishAnalyzer
-import org.apache.lucene.analysis.eu.BasqueAnalyzer
-import org.apache.lucene.analysis.fa.PersianAnalyzer
-import org.apache.lucene.analysis.fi.FinnishAnalyzer
-import org.apache.lucene.analysis.fr.FrenchAnalyzer
-import org.apache.lucene.analysis.ga.IrishAnalyzer
-import org.apache.lucene.analysis.gl.GalicianAnalyzer
-import org.apache.lucene.analysis.hi.HindiAnalyzer
-import org.apache.lucene.analysis.hu.HungarianAnalyzer
-import org.apache.lucene.analysis.id.IndonesianAnalyzer
-import org.apache.lucene.analysis.it.ItalianAnalyzer
-import org.apache.lucene.analysis.lt.LithuanianAnalyzer
-import org.apache.lucene.analysis.lv.LatvianAnalyzer
-import org.apache.lucene.analysis.nl.DutchAnalyzer
-import org.apache.lucene.analysis.no.NorwegianAnalyzer
-import org.apache.lucene.analysis.pt.PortugueseAnalyzer
-import org.apache.lucene.analysis.ru.RussianAnalyzer
-import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.analysis.tr.TurkishAnalyzer
+import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
+import org.apache.lucene.analysis.core.{LetterTokenizer, LowerCaseFilter, WhitespaceTokenizer}
 import org.zouzias.spark.lucenerdd.config.Configurable
 
 /**
- * Lucene Analyzer loader via configuration
- */
+  * Lucene Analyzer loader via configuration
+  */
+
+class CustomAnalyzer extends Analyzer with Serializable {
+
+  override def createComponents(fieldName: String): TokenStreamComponents = {
+    val tokenizer = new WhitespaceTokenizer()
+    val lowerCaseFilter = new LowerCaseFilter(tokenizer)
+    new TokenStreamComponents(tokenizer, lowerCaseFilter)
+  }
+}
+
 trait AnalyzerConfigurable extends Configurable {
 
-  private val AnalyzerConfigKey = "lucenerdd.analyzer.name"
-
-  protected val AnalyzerConfigName: Option[String] = if (config.hasPath(AnalyzerConfigKey)) {
-    Some(config.getString(AnalyzerConfigKey))} else None
-
-    protected val Analyzer: Analyzer = {
-
-      if (AnalyzerConfigName.isDefined) {
-        AnalyzerConfigName.get match {
-        case "whitespace" => new WhitespaceAnalyzer()
-        case "ar" => new ArabicAnalyzer()
-        case "bg" => new BulgarianAnalyzer()
-        case "br" => new BrazilianAnalyzer()
-        case "ca" => new CatalanAnalyzer()
-        case "cjk" => new CJKAnalyzer()
-        case "ckb" => new SoraniAnalyzer()
-        case "cz" => new CzechAnalyzer()
-        case "da" => new DanishAnalyzer()
-        case "de" => new GermanAnalyzer()
-        case "el" => new GreekAnalyzer()
-        case "en" => new EnglishAnalyzer()
-        case "es" => new SpanishAnalyzer()
-        case "eu" => new BasqueAnalyzer()
-        case "fa" => new PersianAnalyzer()
-        case "fi" => new FinnishAnalyzer()
-        case "fr" => new FrenchAnalyzer()
-        case "ga" => new IrishAnalyzer()
-        case "gl" => new GalicianAnalyzer()
-        case "hi" => new HindiAnalyzer()
-        case "hu" => new HungarianAnalyzer()
-        case "id" => new IndonesianAnalyzer()
-        case "it" => new ItalianAnalyzer()
-        case "lt" => new LithuanianAnalyzer()
-        case "lv" => new LatvianAnalyzer()
-        case "nl" => new DutchAnalyzer()
-        case "no" => new NorwegianAnalyzer()
-        case "pt" => new PortugueseAnalyzer()
-        case "ru" => new RussianAnalyzer()
-        case "tr" => new TurkishAnalyzer()
-        case _ => new StandardAnalyzer()
-      }
-    }
-    else {
-      new StandardAnalyzer()
-    }
+  protected val Analyzer: Analyzer = {
+    new CustomAnalyzer()
   }
 }
