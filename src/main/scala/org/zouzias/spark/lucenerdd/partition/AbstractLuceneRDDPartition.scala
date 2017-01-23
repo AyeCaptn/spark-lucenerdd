@@ -17,7 +17,7 @@
 
 package org.zouzias.spark.lucenerdd.partition
 
-import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.{BooleanClause, Query}
 import org.zouzias.spark.lucenerdd.models.{SparkFacetResult, SparkScoreDoc}
 import org.zouzias.spark.lucenerdd.response.LuceneRDDResponsePartition
 
@@ -61,6 +61,14 @@ private[lucenerdd] abstract class AbstractLuceneRDDPartition[T] extends Serializ
    * @return
    */
   def query(searchString: String, topK: Int): LuceneRDDResponsePartition
+
+  /**
+    * Generic Lucene Query using QueryParser
+    * @param query Lucene query object
+    * @param topK Number of documents to return
+    * @return
+    */
+  def luceneQuery(query: Query, topK: Int): LuceneRDDResponsePartition
 
   /**
    * Multiple generic Lucene Queries using QueryParser

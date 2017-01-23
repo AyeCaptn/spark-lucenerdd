@@ -16,7 +16,7 @@
  */
 package org.zouzias.spark.lucenerdd.spatial.shape
 
-import com.spatial4j.core.shape.Shape
+import org.locationtech.spatial4j.shape.Shape
 import com.twitter.algebird.{TopK, TopKMonoid}
 import org.apache.lucene.document.Document
 import org.apache.lucene.spatial.query.SpatialOperation

@@ -18,7 +18,9 @@ package org.zouzias.spark.lucenerdd
 
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.{FuzzyQuery, PrefixQuery}
+import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search._
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -30,6 +32,20 @@ class LuceneRDDRecordLinkageSpec extends FlatSpec
   with Matchers
   with BeforeAndAfterEach
   with SharedSparkContext {
+
+  override val conf: SparkConf = LuceneRDDKryoRegistrator.registerKryoClasses(new SparkConf()
+    .setMaster("local[*]")
+    .setAppName("test")
+    .set("spark.ui.enabled", "false")
+    .set("spark.app.id", appID)
+    .registerKryoClasses(Array(
+      classOf[Query],
+      classOf[BooleanQuery],
+      classOf[FuzzyQuery],
+      classOf[TermQuery],
+      classOf[FuzzyQuery],
+      classOf[Occur]))
+  )
 
   var luceneRDD: LuceneRDD[_] = _
 
@@ -175,6 +191,54 @@ class LuceneRDDRecordLinkageSpec extends FlatSpec
     }
 
     val linked = luceneRDD.link(leftCountriesRDD, fuzzyLinker, 10)
+    linked.count() should equal(leftCountries.length)
+    // Greece should appear only
+    linked.collect.exists(link => link._1 == "gree" && link._2.length == 1)  should equal(true)
+    // At least Italy, Iraq and Iran should appear
+    linked.collect.exists(link => link._1 == "ita" && link._2.length >= 3) should equal(true)
+  }
+
+  "LuceneRDD.linkByLuceneQuery" should "correctly link with a prefixQuery" in {
+    val leftCountries = Array("gree", "germa", "spa", "ita")
+    implicit val mySC = sc
+    val leftCountriesRDD = sc.parallelize(leftCountries)
+
+    val countries = sc.parallelize(Source.fromFile("src/test/resources/countries.txt").getLines()
+      .map(_.toLowerCase()).toSeq)
+
+    luceneRDD = LuceneRDD(countries)
+
+    val linker = (country: String) => {
+      val term = new Term("_1", country)
+      new PrefixQuery(term)
+    }
+
+    val linked = luceneRDD.linkByLuceneQuery(leftCountriesRDD, linker, 10)
+
+    linked.count() should equal(leftCountries.length)
+    // Greece and Greenland should appear
+    linked.collect().exists(link => link._1 == "gree" && link._2.length == 2) should equal(true)
+    // Italy should appear
+    linked.collect().exists(link => link._1 == "ita" && link._2.length == 1) should equal(true)
+  }
+
+  "LuceneRDD.linkByLuceneQuery" should "correctly link with a fuzzyQuery" in {
+    val leftCountries = Array("gree", "germa", "spa", "ita")
+    implicit val mySC = sc
+    val leftCountriesRDD = sc.parallelize(leftCountries)
+
+    val countries = sc.parallelize(Source.fromFile("src/test/resources/countries.txt").getLines()
+      .map(_.toLowerCase()).toSeq)
+
+    luceneRDD = LuceneRDD(countries)
+
+    val fuzzyLinker = (country: String) => {
+      val Fuzziness = 2
+      val term = new Term("_1", country)
+      new FuzzyQuery(term, Fuzziness)
+    }
+
+    val linked = luceneRDD.linkByLuceneQuery(leftCountriesRDD, fuzzyLinker, 10)
     linked.count() should equal(leftCountries.length)
     // Greece should appear only
     linked.collect.exists(link => link._1 == "gree" && link._2.length == 1)  should equal(true)

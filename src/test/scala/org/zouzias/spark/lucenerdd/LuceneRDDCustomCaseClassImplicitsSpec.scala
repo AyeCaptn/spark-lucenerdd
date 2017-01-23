@@ -18,7 +18,7 @@ package org.zouzias.spark.lucenerdd
 
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.SparkConf
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{Matchers, BeforeAndAfterEach, FlatSpec}
 import org.zouzias.spark.lucenerdd.testing.Person
 
 class LuceneRDDCustomCaseClassImplicitsSpec extends FlatSpec
@@ -32,27 +32,27 @@ class LuceneRDDCustomCaseClassImplicitsSpec extends FlatSpec
     luceneRDD.close()
   }
 
-  override val conf = LuceneRDDKryoRegistrator.registerKryoClasses(new SparkConf().
+  override val conf: SparkConf = LuceneRDDKryoRegistrator.registerKryoClasses(new SparkConf().
     setMaster("local[*]").
     setAppName("test").
     set("spark.ui.enabled", "false").
     set("spark.app.id", appID))
 
-  val elem = Array("fear", "death", "water", "fire", "house")
-    .zipWithIndex.map{ case (str, index) => Person(str, index, s"${str}@gmail.com")}
+  val elem: Array[Person] = Array("fear", "death", "water", "fire", "house")
+    .zipWithIndex.map { case (str, index) => Person(str, index, s"$str@gmail.com") }
 
   "LuceneRDD(case class).count" should "handle nulls properly" in {
     val elemsWithNulls = Array("fear", "death", "water", "fire", "house")
-      .zipWithIndex.map{ case (str, index) => Person(str, index, null)}
+      .zipWithIndex.map { case (str, index) => Person(str, index, null) }
     val rdd = sc.parallelize(elemsWithNulls)
     luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count() should equal (elemsWithNulls.size)
+    luceneRDD.count() should equal(elemsWithNulls.length)
   }
 
   "LuceneRDD(case class).count" should "return correct number of elements" in {
     val rdd = sc.parallelize(elem)
     luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count() should equal (elem.size)
+    luceneRDD.count() should equal(elem.length)
   }
 
   "LuceneRDD(case class).fields" should "return all fields" in {

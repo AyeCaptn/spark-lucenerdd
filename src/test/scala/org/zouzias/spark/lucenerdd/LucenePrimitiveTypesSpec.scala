@@ -20,18 +20,12 @@ import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.SparkConf
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
-class LucenePrimitiveTypesSpec extends FlatSpec with Matchers
+import scala.util.Random
+
+class LucenePrimitiveTypesSpec extends FlatSpec
+  with Matchers
   with BeforeAndAfterEach
   with SharedSparkContext {
-
-  override val conf = LuceneRDDKryoRegistrator.registerKryoClasses(new SparkConf().
-    setMaster("local[*]").
-    setAppName("test").
-    set("spark.ui.enabled", "false").
-    set("spark.app.id", appID))
-
-  def randomString(length: Int): String = scala.util.Random.alphanumeric.take(length).mkString
-  val array = (1 to 24).map(randomString(_))
 
   var luceneRDD: LuceneRDD[_] = _
 
@@ -39,39 +33,26 @@ class LucenePrimitiveTypesSpec extends FlatSpec with Matchers
     luceneRDD.close()
   }
 
-  /**
-   * Do not work with facets (multi-valued issue)
+  override val conf: SparkConf = LuceneRDDKryoRegistrator.registerKryoClasses(new SparkConf().
+    setMaster("local[*]").
+    setAppName("test").
+    set("spark.ui.enabled", "false").
+    set("spark.app.id", appID))
 
-  "LuceneRDD" should "work with RDD[List[String]]" in {
-    val array = Array(List("aaa", "aaa2"), List("bbb", "bbb2"),
-      List("ccc", "ccc2"), List("ddd"), List("eee"))
-    val rdd = sc.parallelize(array)
-    luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count should be (array.size)
-  }
-
-  "LuceneRDD" should "work with RDD[Set[String]]" in {
-    val array = Array(Set("aaa", "aaa2"), Set("bbb", "bbb2"),
-      Set("ccc", "ccc2"), Set("ddd"), Set("eee"))
-    val rdd = sc.parallelize(array)
-    luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count should be (array.size)
-  }
-
-   */
+  def randomString(length: Int): String = Random.alphanumeric.take(length).mkString
 
   "LuceneRDD" should "work with RDD[String]" in {
     val array = Array("aaa", "bbb", "ccc", "ddd", "eee")
     val rdd = sc.parallelize(array)
     luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count should be (array.size)
+    luceneRDD.count should be (array.length)
   }
 
   "LuceneRDD" should "work with RDD[Int]" in {
-    val array = (1 to 22)
+    val array: Range.Inclusive = 1 to 22
     val rdd = sc.parallelize(array)
     luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count should be (array.size)
+    luceneRDD.count should be (array.length)
   }
 
   "LuceneRDD" should "work with RDD[Float]" in {
@@ -109,7 +90,6 @@ class LucenePrimitiveTypesSpec extends FlatSpec with Matchers
     val array = Array("aaa", null, "ccc", null, "eee")
     val rdd = sc.parallelize(array)
     luceneRDD = LuceneRDD(rdd)
-    luceneRDD.count should be (array.size)
+    luceneRDD.count should be (array.length)
   }
-
 }

@@ -31,7 +31,12 @@ object Metrics {
     .build("localhost", 8125)
     .start(1, TimeUnit.SECONDS)
 
-  final val LuceneRDDCounter =
-    metricRegistry
-      .counter("lucenerdd-query-counter")
+  final val searchTopKCounter: Counter =
+    metricRegistry.counter("search-topk-counter")
+
+  final val indexedDocumentCounter: Counter =
+    metricRegistry.counter("indexed-document-counter")
+
+  final val linkByLuceneQueryJoinCounter: Counter =
+    metricRegistry.counter("link-by-lucene-query-join-counter")
 }

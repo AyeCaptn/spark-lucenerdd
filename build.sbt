@@ -79,7 +79,7 @@ pomExtra := (
   </developers>
 )
 
-val luceneV = "5.5.3"
+val luceneV = "6.3.0"
 
 spName := "zouzias/spark-lucenerdd"
 sparkVersion := "2.1.0"
@@ -96,7 +96,7 @@ testSparkVersion := sys.props.get("spark.testVersion").getOrElse(sparkVersion.va
 
 
 // scalastyle:off
-val scalactic                 = "org.scalactic"                  %% "scalactic" % "3.0.1"
+val scalactic                 = "org.scalactic"                  %% "scalactic"                % "3.0.1"
 val scalatest                 = "org.scalatest"                  %% "scalatest"                % "3.0.1" % "test"
 
 val joda_time                 = "joda-time"                      % "joda-time"                 % "2.9.7"
@@ -110,8 +110,15 @@ val lucene_analyzers          = "org.apache.lucene"              % "lucene-analy
 val lucene_query_parsers      = "org.apache.lucene"              % "lucene-queryparser"        % luceneV
 val lucene_expressions        = "org.apache.lucene"              % "lucene-expressions"        % luceneV
 val lucene_spatial            = "org.apache.lucene"              % "lucene-spatial"            % luceneV
+val lucene_spatial_extras     = "org.apache.lucene"              % "lucene-spatial-extras"     % luceneV
+val lucene_highlighter        = "org.apache.lucene"              % "lucene-highlighter"        % luceneV
 
 val jts                       = "com.vividsolutions"             % "jts"                       % "1.13"
+
+val metrics                   = "io.dropwizard.metrics"          % "metrics-core"              % "3.1.0"
+val metrics_statsd            = "com.readytalk"                  % "metrics3-statsd"           % "4.1.2"
+val kryo_serializers          = "de.javakaffee"                  % "kryo-serializers"          % "0.41"
+val spatial4j                 = "org.locationtech.spatial4j"     % "spatial4j"                 % "0.6"
 // scalastyle:on
 
 
@@ -121,18 +128,26 @@ libraryDependencies ++= Seq(
   lucene_analyzers,
   lucene_expressions,
   lucene_query_parsers,
+  lucene_highlighter,
   typesafe_config,
   lucene_spatial,
+  lucene_spatial_extras,
   jts,
   joda_time,
   joda_convert, // To avoid warning: Class org.joda.convert.ToString not found
   scalactic,  // scalactic is recommended, see http://www.scalatest.org/install
-  scalatest
+  scalatest,
+  metrics,
+  metrics_statsd,
+  kryo_serializers,
+  spatial4j
 )
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "test" force(),
-  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "test" force(),
+  "org.apache.spark" %% "spark-core" % testSparkVersion.value % "test" force()
+    exclude("org.scalatest", "scalatest_2.11"),
+  "org.apache.spark" %% "spark-sql" % testSparkVersion.value % "test" force()
+    exclude("org.scalatest", "scalatest_2.11"),
   "com.holdenkarau"  %% "spark-testing-base" % s"${testSparkVersion.value}_0.5.0" % "test" intransitive(),
   "org.scala-lang"    % "scala-library" % scalaVersion.value % "compile"
 )
@@ -141,7 +156,7 @@ libraryDependencies ++= Seq(
 lazy val root = (project in file(".")).
   enablePlugins(BuildInfoPlugin).
   settings(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion, buildInfoObject),
     // See https://github.com/sbt/sbt-buildinfo#buildinfooptionbuildtime
     buildInfoOptions += BuildInfoOption.BuildTime,
     // https://github.com/sbt/sbt-buildinfo#buildinfooptiontomap

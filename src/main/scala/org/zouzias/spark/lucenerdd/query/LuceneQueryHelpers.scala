@@ -29,6 +29,7 @@ import org.apache.lucene.queries.mlt.MoreLikeThis
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search._
 import org.zouzias.spark.lucenerdd.aggregate.SparkFacetResultMonoid
+import org.zouzias.spark.lucenerdd.metrics.Metrics
 import org.zouzias.spark.lucenerdd.models.{SparkFacetResult, SparkScoreDoc}
 
 import scala.collection.JavaConverters._
@@ -42,6 +43,8 @@ object LuceneQueryHelpers extends Serializable {
   lazy val MatchAllDocs = new MatchAllDocsQuery()
   lazy val MatchAllDocsString = "*:*"
   private val QueryParserDefaultField = "text"
+
+  private val searchTopKCounter = Metrics.searchTopKCounter
 
   /**
    * Extract list of terms for a given analyzer
@@ -177,7 +180,22 @@ object LuceneQueryHelpers extends Serializable {
    * @return
    */
   def searchTopK(indexSearcher: IndexSearcher, query: Query, topK: Int): Seq[SparkScoreDoc] = {
-   indexSearcher.search(query, topK).scoreDocs.map(SparkScoreDoc(indexSearcher, _))
+    searchTopKCounter.inc()
+    indexSearcher.search(query, topK).scoreDocs.map(SparkScoreDoc(indexSearcher, _))
+  }
+
+  /**
+    * Lucene query
+    *
+    * @param indexSearcher Index searcher
+    * @param query Query Object
+    * @param topK Number of returned documents
+    * @return
+    */
+  def luceneQuery(indexSearcher: IndexSearcher,
+                query: Query,
+                topK: Int): Seq[SparkScoreDoc] = {
+    LuceneQueryHelpers.searchTopK(indexSearcher, query, topK)
   }
 
   /**

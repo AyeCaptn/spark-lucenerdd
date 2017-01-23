@@ -16,8 +16,17 @@
  */
 package org.zouzias.spark.lucenerdd
 
+import java.util
+import java.util.Collections
+
+import com.google.common.collect.{ImmutableList, Multiset}
 import com.twitter.algebird.TopK
 import com.twitter.chill.Kryo
+import de.javakaffee.kryoserializers.{ArraysAsListSerializer, EnumMapSerializer, SynchronizedCollectionsSerializer, UnmodifiableCollectionsSerializer}
+import de.javakaffee.kryoserializers.guava.ImmutableListSerializer
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search._
 import org.apache.spark.SparkConf
 import org.apache.spark.serializer.{KryoRegistrator, KryoSerializer}
 import org.zouzias.spark.lucenerdd.facets.FacetedLuceneRDD
@@ -26,7 +35,12 @@ import org.zouzias.spark.lucenerdd.partition.LuceneRDDPartition
 import org.zouzias.spark.lucenerdd.response.{LuceneRDDResponse, LuceneRDDResponsePartition}
 import org.zouzias.spark.lucenerdd.testing.{FavoriteCaseClass, Person}
 
+import scala.collection.mutable
+
 class LuceneRDDKryoRegistrator extends KryoRegistrator {
+  val enumMapSerializer = new EnumMapSerializer()
+  val immutableListSerializer = new ImmutableListSerializer()
+
   def registerClasses(kryo: Kryo): Unit = {
     kryo.register(classOf[LuceneRDD[_]])
     kryo.register(classOf[LuceneRDDPartition[_]])
@@ -66,13 +80,34 @@ class LuceneRDDKryoRegistrator extends KryoRegistrator {
     kryo.register(classOf[Array[FavoriteCaseClass]]) /* For testing */
     kryo.register(classOf[Person]) /* For testing */
     kryo.register(classOf[Array[Person]]) /* For testing */
+    kryo.register(classOf[BooleanClause])
+    kryo.register(classOf[Array[BooleanClause]])
+    kryo.register(classOf[Occur])
+    kryo.register(classOf[util.EnumMap[_, _]], enumMapSerializer)
+    kryo.register(classOf[util.EnumMap[Occur, _]], enumMapSerializer)
+    kryo.register(classOf[Multiset[BooleanClause]])
+    kryo.register(classOf[util.HashSet[BooleanClause]])
+    kryo.register(classOf[util.ArrayList[BooleanClause]])
+    kryo.register(classOf[ImmutableList[BooleanClause]], immutableListSerializer)
+    kryo.register(classOf[Array[Occur]])
+    kryo.register(classOf[Query])
+    kryo.register(classOf[Array[Query]])
+    kryo.register(classOf[List[_]])
+    kryo.register(classOf[BooleanQuery])
+    kryo.register(util.Arrays.asList().getClass, new ArraysAsListSerializer)
+    kryo.register(classOf[mutable.ResizableArray[_]])
+    kryo.register(classOf[MatchNoDocsQuery])
+    kryo.register(classOf[Term])
+    kryo.register(classOf[TermQuery])
+    UnmodifiableCollectionsSerializer.registerSerializers(kryo)
+    SynchronizedCollectionsSerializer.registerSerializers(kryo)
     ()
   }
 }
 
 /**
- * Decorator for LuceneRDD Kryo serialization
- */
+  * Decorator for LuceneRDD Kryo serialization
+  */
 object LuceneRDDKryoRegistrator {
   def registerKryoClasses(conf: SparkConf): SparkConf = {
     conf.set("spark.serializer", classOf[KryoSerializer].getName)

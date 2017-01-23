@@ -16,14 +16,13 @@
  */
 package org.zouzias.spark.lucenerdd.analyzers
 
-import org.apache.lucene.analysis.en.EnglishAnalyzer
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 class AnalyzersConfigurableSpec extends FlatSpec with Matchers
   with BeforeAndAfterEach
   with AnalyzerConfigurable {
 
-  "AnalyzersConfigurable.Analyzer" should "be english by default" in {
-   Analyzer.isInstanceOf[EnglishAnalyzer] should equal(true)
+  "AnalyzersConfigurable.Analyzer" should "be custom by default" in {
+    Analyzer.isInstanceOf[CustomAnalyzer] should equal(true)
   }
 }

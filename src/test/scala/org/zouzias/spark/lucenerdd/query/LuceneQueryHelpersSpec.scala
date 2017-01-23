@@ -20,10 +20,11 @@ import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document._
 import org.apache.lucene.facet.FacetField
 import org.apache.lucene.facet.taxonomy.directory.DirectoryTaxonomyReader
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.index.{DirectoryReader, Term}
+import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search._
+import org.apache.lucene.util.QueryBuilder
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
-import org.zouzias.spark.lucenerdd.LuceneRDD
 import org.zouzias.spark.lucenerdd.facets.FacetedLuceneRDD
 import org.zouzias.spark.lucenerdd.store.IndexWithTaxonomyWriter
 
@@ -35,7 +36,7 @@ class LuceneQueryHelpersSpec extends FlatSpec
   with BeforeAndAfterEach {
 
   // Load cities
-  val countries = Source.fromFile("src/test/resources/countries.txt").getLines()
+  val countries: Seq[String] = Source.fromFile("src/test/resources/countries.txt").getLines()
     .map(_.toLowerCase()).toSeq
 
   private val MaxFacetValue: Int = 10
@@ -60,17 +61,18 @@ class LuceneQueryHelpersSpec extends FlatSpec
     val doc = new Document()
     doc.add(new StringField("_1", text, Store.YES))
     doc.add(new FacetField(s"_1${FacetedLuceneRDD.FacetTextFieldSuffix}", text))
-    doc.add(new IntField("_2", pos, Store.YES))
+    doc.add(new IntPoint("_2", pos))
+    doc.add(new StoredField("_2", pos))
     doc.add(new FacetField(TestFacetName, pos.toString))
     doc
   }
 
   "LuceneQueryHelpers.fields" should "return the list of fields" in {
-    LuceneQueryHelpers.fields(indexSearcher) should equal (Set("_1", "_2"))
+    LuceneQueryHelpers.fields(indexSearcher) should equal(Set("_1", "_2"))
   }
 
   "LuceneQueryHelpers.totalDocs" should "return correct total document counts" in {
-    LuceneQueryHelpers.totalDocs(indexSearcher) should equal (countries.size)
+    LuceneQueryHelpers.totalDocs(indexSearcher) should equal(countries.size)
   }
 
   "LuceneQueryHelpers.facetedTextSearch" should "return correct facet counts" in {
@@ -88,7 +90,7 @@ class LuceneQueryHelpersSpec extends FlatSpec
     topDocs.size should equal(1)
 
     topDocs.exists(doc => doc.doc.textField("_1").forall(x =>
-      x.toString().toLowerCase().contains(greece))) should equal(true)
+      x.toString.toLowerCase().contains(greece))) should equal(true)
   }
 
   "LuceneQueryHelpers.prefixQuery" should "return correct documents" in {
@@ -96,6 +98,34 @@ class LuceneQueryHelpersSpec extends FlatSpec
     val topDocs = LuceneQueryHelpers.prefixQuery(indexSearcher, "_1", prefix, 100)
 
     topDocs.forall(doc => doc.doc.textField("_1").exists(x =>
-      x.toString().toLowerCase().contains(prefix))) should equal(true)
+      x.toString.toLowerCase().contains(prefix))) should equal(true)
   }
+
+  "LuceneQueryHelpers.luceneQuery" should "perform a BooleanQuery" in {
+    val builder = new BooleanQuery.Builder()
+    val query: Query = builder.add(new TermQuery(new Term("_1", "greece")), Occur.MUST).build()
+    val topDocs = LuceneQueryHelpers.luceneQuery(indexSearcher, query, 100)
+
+    topDocs.forall(doc => doc.doc.textField("_1").exists(x =>
+      x.toString.toLowerCase.contains("greece"))) should equal(true)
+  }
+
+  "LuceneQueryHelpers.luceneQuery" should "perform a FuzzyQuery" in {
+    val builder = new BooleanQuery.Builder()
+    val query: Query = builder.add(new FuzzyQuery(new Term("_1", "greece"), 2), Occur.MUST).build()
+    val topDocs = LuceneQueryHelpers.luceneQuery(indexSearcher, query, 100)
+
+    topDocs.forall(doc => doc.doc.textField("_1").exists(x =>
+      x.toString.toLowerCase.contains("greece"))) should equal(true)
+  }
+
+  "LuceneQueryHelpers.luceneQuery" should "perform a MinShouldMatchQuery" in {
+    val builder = new QueryBuilder(Analyzer)
+    val query: Query = builder.createMinShouldMatchQuery("_1", "greece", 0.7f)
+    val topDocs = LuceneQueryHelpers.luceneQuery(indexSearcher, query, 100)
+
+    topDocs.forall(doc => doc.doc.textField("_1").exists(x =>
+      x.toString.toLowerCase.contains("greece"))) should equal(true)
+  }
+
 }
