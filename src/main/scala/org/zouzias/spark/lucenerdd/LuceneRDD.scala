@@ -21,6 +21,7 @@ import com.twitter.algebird.{TopK, TopKMonoid}
 import org.apache.lucene.document.Document
 import org.apache.lucene.search.Query
 import org.apache.spark._
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.storage.StorageLevel
@@ -42,6 +43,8 @@ class LuceneRDD[T: ClassTag](protected val partitionsRDD: RDD[AbstractLuceneRDDP
     with LuceneRDDConfigurable {
 
   logInfo("Instance is created...")
+
+  var broadcast: Broadcast[Array[(Long, Query)]] = _
 
   override protected def getPartitions: Array[Partition] = partitionsRDD.partitions
 
@@ -188,7 +191,7 @@ class LuceneRDD[T: ClassTag](protected val partitionsRDD: RDD[AbstractLuceneRDDP
     * @param other          RDD to be linked
     * @param searchQueryGen Function that generates a Lucene Query object for each element of other
     * @tparam T1 A type
-    * @return an RDD of Tuple2 that contains the linked search Lucene Document in the second position
+    * @return RDD of Tuple2 that contains the linked search Lucene Document in the second position
     */
   def linkByQuery[T1: ClassTag](other: RDD[T1],
                                 searchQueryGen: T1 => Query, topK: Int = DefaultTopK)
@@ -218,13 +221,14 @@ class LuceneRDD[T: ClassTag](protected val partitionsRDD: RDD[AbstractLuceneRDDP
     val topKMonoid = new TopKMonoid[SparkScoreDoc](topK)(SparkScoreDoc.descending)
     logInfo("Collecting query points to driver")
     val otherWithIndex = other.zipWithIndex().map(_.swap)
-    // create tuples (index, recordstomatch)
     val queries = otherWithIndex.mapValues(searchQueryGen).collect()
-    val queriesB = partitionsRDD.context.broadcast(queries)
+    logInfo("Broadcasting queries on the worker(s)")
+    // val queriesB = partitionsRDD.context.broadcast(queries)
+    createBroadcast(queries)
 
     val resultsByPart: RDD[(Long, TopK[SparkScoreDoc])] = partitionsRDD.mapPartitions(partitions =>
       partitions.flatMap { case partition =>
-        queriesB.value.par.map { case (index, qr) =>
+        getBroadcast.value.par.map { case (index, qr) =>
           (index, topKMonoid.build(partition.luceneQuery(qr, topK)))
         }
       })
@@ -335,6 +339,22 @@ class LuceneRDD[T: ClassTag](protected val partitionsRDD: RDD[AbstractLuceneRDDP
   def close(): Unit = {
     logInfo("Closing LuceneRDD...")
     partitionsRDD.foreach(_.close())
+  }
+
+  /**
+    * Create a broadcast variable
+    */
+  def createBroadcast(value: Array[(Long, Query)]): Unit = {
+    broadcast = partitionsRDD.context.broadcast(value)
+  }
+
+  def getBroadcast: Broadcast[Array[(Long, Query)]] = {
+    broadcast
+  }
+
+  def deleteBroadcast(): Unit = {
+    broadcast.unpersist()
+    broadcast.destroy()
   }
 }
 
