@@ -23,7 +23,7 @@ import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.search._
 import org.joda.time.DateTime
 import org.zouzias.spark.lucenerdd.facets.FacetedLuceneRDD
-import org.zouzias.spark.lucenerdd.metrics.Metrics
+import org.zouzias.spark.lucenerdd.metrics.MetricsCollector
 import org.zouzias.spark.lucenerdd.models.{SparkFacetResult, SparkScoreDoc}
 import org.zouzias.spark.lucenerdd.query.LuceneQueryHelpers
 import org.zouzias.spark.lucenerdd.response.LuceneRDDResponsePartition
@@ -42,14 +42,11 @@ private[lucenerdd] class LuceneRDDPartition[T]
 
   private val (iterOriginal, iterIndex) = iter.duplicate
 
-  private val indexedDocumentCounter = Metrics.indexedDocumentCounter
-
   private val startTime = new DateTime(System.currentTimeMillis())
   logInfo(s"Indexing process initiated at ${startTime}...")
   iterIndex.foreach { case elem =>
     // (implicitly) convert type T to Lucene document
     val doc = docConversion(elem)
-    indexedDocumentCounter.inc()
     indexWriter.addDocument(FacetsConfig.build(taxoWriter, doc))
   }
   private val endTime = new DateTime(System.currentTimeMillis())
