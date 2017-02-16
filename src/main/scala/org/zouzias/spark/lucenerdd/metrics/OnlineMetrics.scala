@@ -17,26 +17,10 @@
 
 package org.zouzias.spark.lucenerdd.metrics
 
-import java.util.concurrent.TimeUnit
+import com.codahale.metrics.Counter
 
-import com.codahale.metrics._
-import com.readytalk.metrics.StatsDReporter
+trait OnlineMetrics extends MetricsCollector {
 
+  val matchedRecordsCounter: Counter = metricRegistry.counter("matched-records-counter")
 
-object Metrics {
-  @transient lazy val metricRegistry = {
-    new MetricRegistry()
-  }
-  StatsDReporter.forRegistry(metricRegistry)
-    .build("localhost", 8125)
-    .start(1, TimeUnit.SECONDS)
-
-  final val searchTopKCounter: Counter =
-    metricRegistry.counter("search-topk-counter")
-
-  final val indexedDocumentCounter: Counter =
-    metricRegistry.counter("indexed-document-counter")
-
-  final val linkByLuceneQueryJoinCounter: Counter =
-    metricRegistry.counter("link-by-lucene-query-join-counter")
 }
